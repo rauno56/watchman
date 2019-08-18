@@ -1,0 +1,13 @@
+[package]
+name = "watchman"
+version = "0.1.0"
+authors = ["Rauno Viskus <Rauno56@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dialoguer = { path = "../dialoguer" }
+serde = { version = "1.0.98", features = ["derive"] }
+json5 = "0.2.5"
+sysinfo = "0.9.1"
