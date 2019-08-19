@@ -15,9 +15,13 @@ use system::get_by_pid;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 enum ProcessStatus {
+    /// Expecting the process to be running with pid.
     Running(i32),
+    /// Expected process is not running, but there is another one with pid.
     Invalid(i32),
-    Stopped,
+    /// Expected process is not running, there is nothing with pid.
+    Stopped(i32),
+    /// Process is not expected to run.
     Disabled,
 }
 
@@ -33,7 +37,9 @@ impl ProcessConfig {
     //TODO: see if you can make status as non-optional and use something like "New" as a variant
     fn get_pid(&self) -> Option<i32> {
         match self.status {
-            Some(ProcessStatus::Running(proc)) | Some(ProcessStatus::Invalid(proc)) => Some(proc),
+            Some(ProcessStatus::Running(proc))
+            | Some(ProcessStatus::Invalid(proc))
+            | Some(ProcessStatus::Stopped(proc)) => Some(proc),
             _ => None,
         }
     }
@@ -45,7 +51,7 @@ impl ProcessConfig {
             each one unwrapping another layer of Option.
         */
         self.get_pid().map_or(ProcessStatus::Disabled, |pid| {
-            get_by_pid(pid).map_or(ProcessStatus::Stopped, |proc| {
+            get_by_pid(pid).map_or(ProcessStatus::Stopped(pid), |proc| {
                 if self.cmd == proc.cmd {
                     ProcessStatus::Running(proc.pid)
                 } else {
@@ -82,6 +88,10 @@ impl ProcessConfig {
             Some(ProcessStatus::Running(pid)) => {
                 let res = system::kill_by_pid(pid);
                 self.update();
+                match self.status {
+                    Some(ProcessStatus::Stopped(_)) => self.status = Some(ProcessStatus::Disabled),
+                    _ => {}
+                }
                 res
             }
             _ => false,
