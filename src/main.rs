@@ -122,36 +122,11 @@ trait StateTrait {
     fn update_all(&mut self) {}
 }
 
-type MapState = HashMap<String, ProcessConfig>;
-
-impl From<&State> for MapState {
-    fn from(state: &State) -> Self {
-        state
-            .processes
-            .iter()
-            .cloned()
-            .map(|proc| (proc.name.clone(), proc.clone()))
-            .collect()
-    }
-}
-
-impl StateTrait for MapState {
-    fn update_all(&mut self) {
-        self.values_mut().for_each(|process| process.update());
-    }
-}
-
-//TODO: refactor State into a Map instead to have name as an index more naturally
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
-struct State {
-    processes: Vec<ProcessConfig>,
-}
+type State = HashMap<String, ProcessConfig>;
 
 impl StateTrait for State {
     fn update_all(&mut self) {
-        self.processes
-            .iter_mut()
-            .for_each(|process| process.update());
+        self.values_mut().for_each(|process| process.update());
     }
 }
 
@@ -163,23 +138,9 @@ fn read_state(file_path: &str) -> Result<State, json5::Error> {
 }
 
 fn write_state(file_path: &str, state: &State) -> std::result::Result<(), Box<error::Error>> {
-    println!("Writing {:?} to {:?}", state, file_path);
-
-    let mut buffer = File::create(file_path)?;
-
-    let serialized = json5::to_string(&state)?;
-    buffer.write_all(serialized.as_bytes())?;
-
-    return std::result::Result::Ok(());
-}
-
-fn write_state_map(
-    file_path: &str,
-    state: &MapState,
-) -> std::result::Result<(), Box<error::Error>> {
     println!("Writing Map {:?} to {:?}", state, file_path);
 
-    let mut buffer = File::create(format!(".map{}", file_path))?;
+    let mut buffer = File::create(format!("{}", file_path))?;
 
     let serialized = json5::to_string(&state)?;
     buffer.write_all(serialized.as_bytes())?;
@@ -209,14 +170,7 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
     let mut state: State = read_state(file_name)?;
 
     println!("{:?}", state);
-    // state.processes[0].toggle();
 
-    // let res = run_from_string(&"sleep   20".to_string());
-    // println!("{:?}", res);
-
-    // for proc in &state.processes {
-    //   println!("{} is {:?}", proc, proc.check());
-    // }
     let proc = ProcessConfig {
         name: "blha".to_string(),
         cmd: "sleep     32".to_string(),
@@ -228,7 +182,7 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
 
     state.update_all();
 
-    let sleep = &mut state.processes[1];
+    let sleep = &mut state.get_mut("sleep").unwrap();
     println!("before {:?}", sleep);
     if sleep.is_running() {
         println!("killing");
@@ -239,15 +193,7 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
     }
     println!("after {:?}", sleep);
 
-    println!("{:?}", MapState::from(&state));
-
-    // let sleep = &mut state.processes[0];
-    // println!("before {:?}", sleep);
-    // sleep.run();
-    // println!("after {:?}", sleep);
-
     write_state(file_name, &state)?;
-    write_state_map(file_name, &MapState::from(&state))?;
 
     // let selections = Checkboxes::with_theme(&ColorfulTheme::default())
     //     .with_prompt("Pick your food")
