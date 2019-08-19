@@ -2,6 +2,7 @@ extern crate dialoguer;
 
 use json5;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error;
 use std::fmt;
 use std::fs;
@@ -31,7 +32,6 @@ impl Default for ProcessStatus {
     }
 }
 
-//TODO: refactor ProcessConfig into a Map instead to have name as an index more naturally
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 struct ProcessConfig {
     name: String,
@@ -80,7 +80,7 @@ impl ProcessConfig {
 
             get_by_pid(res).map(|proc| {
                 self.cmd = proc.cmd;
-                self.name = proc.name;
+                // self.name = proc.name;
             });
         }
 
@@ -118,6 +118,20 @@ impl fmt::Display for ProcessConfig {
     }
 }
 
+type MapState = HashMap<String, ProcessConfig>;
+
+impl From<&State> for MapState {
+    fn from(state: &State) -> Self {
+        state
+            .processes
+            .iter()
+            .cloned()
+            .map(|proc| (proc.name.clone(), proc.clone()))
+            .collect()
+    }
+}
+
+//TODO: refactor State into a Map instead to have name as an index more naturally
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 struct State {
     processes: Vec<ProcessConfig>,
@@ -150,6 +164,20 @@ fn write_state(file_path: &str, state: &State) -> std::result::Result<(), Box<er
     return std::result::Result::Ok(());
 }
 
+fn write_state_map(
+    file_path: &str,
+    state: &MapState,
+) -> std::result::Result<(), Box<error::Error>> {
+    println!("Writing Map {:?} to {:?}", state, file_path);
+
+    let mut buffer = File::create(format!(".map{}", file_path))?;
+
+    let serialized = json5::to_string(&state)?;
+    buffer.write_all(serialized.as_bytes())?;
+
+    return std::result::Result::Ok(());
+}
+
 fn main() -> std::result::Result<(), Box<error::Error>> {
     let _all_processes = vec![
         ProcessConfig {
@@ -169,7 +197,7 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
         },
     ];
     let file_name = ".watchman.state.json";
-    let mut state: State = read_state(file_name).unwrap();
+    let mut state: State = read_state(file_name)?;
 
     println!("{:?}", state);
     // state.processes[0].toggle();
@@ -202,12 +230,15 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
     }
     println!("after {:?}", sleep);
 
+    println!("{:?}", MapState::from(&state));
+
     // let sleep = &mut state.processes[0];
     // println!("before {:?}", sleep);
     // sleep.run();
     // println!("after {:?}", sleep);
 
     write_state(file_name, &state)?;
+    write_state_map(file_name, &MapState::from(&state))?;
 
     // let selections = Checkboxes::with_theme(&ColorfulTheme::default())
     //     .with_prompt("Pick your food")
