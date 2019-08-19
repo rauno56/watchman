@@ -25,21 +25,27 @@ enum ProcessStatus {
     Disabled,
 }
 
+impl Default for ProcessStatus {
+    fn default() -> Self {
+        ProcessStatus::Disabled
+    }
+}
+
 //TODO: refactor ProcessConfig into a Map instead to have name as an index more naturally
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 struct ProcessConfig {
     name: String,
     cmd: String,
-    status: Option<ProcessStatus>,
+    #[serde(default)]
+    status: ProcessStatus,
 }
 
 impl ProcessConfig {
-    //TODO: see if you can make status as non-optional and use something like "New" as a variant
     fn get_pid(&self) -> Option<i32> {
         match self.status {
-            Some(ProcessStatus::Running(proc))
-            | Some(ProcessStatus::Invalid(proc))
-            | Some(ProcessStatus::Stopped(proc)) => Some(proc),
+            ProcessStatus::Running(proc)
+            | ProcessStatus::Invalid(proc)
+            | ProcessStatus::Stopped(proc) => Some(proc),
             _ => None,
         }
     }
@@ -62,7 +68,7 @@ impl ProcessConfig {
     }
 
     fn update(&mut self) {
-        self.status = Some(self.check_status());
+        self.status = self.check_status();
     }
 
     fn run(&mut self) -> Result<(), Box<error::Error>> {
@@ -70,7 +76,7 @@ impl ProcessConfig {
 
         if !self.is_running() {
             let res = run_from_string(&self.cmd)?;
-            self.status = Some(ProcessStatus::Running(res));
+            self.status = ProcessStatus::Running(res);
 
             get_by_pid(res).map(|proc| {
                 self.cmd = proc.cmd;
@@ -85,11 +91,11 @@ impl ProcessConfig {
         self.update();
 
         match self.status {
-            Some(ProcessStatus::Running(pid)) => {
+            ProcessStatus::Running(pid) => {
                 let res = system::kill_by_pid(pid);
                 self.update();
                 match self.status {
-                    Some(ProcessStatus::Stopped(_)) => self.status = Some(ProcessStatus::Disabled),
+                    ProcessStatus::Stopped(_) => self.status = ProcessStatus::Disabled,
                     _ => {}
                 }
                 res
@@ -100,7 +106,7 @@ impl ProcessConfig {
 
     fn is_running(&self) -> bool {
         match self.status {
-            Some(ProcessStatus::Running(_pid)) => true,
+            ProcessStatus::Running(_pid) => true,
             _ => false,
         }
     }
@@ -149,17 +155,17 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
         ProcessConfig {
             name: "all processes".to_string(),
             cmd: "sleep 10".to_string(),
-            status: None,
+            status: ProcessStatus::Disabled,
         },
         ProcessConfig {
             name: "link to prod".to_string(),
             cmd: "sleep 20".to_string(),
-            status: None,
+            status: ProcessStatus::Disabled,
         },
         ProcessConfig {
             name: "forward sql".to_string(),
             cmd: "sleep 40".to_string(),
-            status: None,
+            status: ProcessStatus::Disabled,
         },
     ];
     let file_name = ".watchman.state.json";
@@ -177,7 +183,7 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
     let proc = ProcessConfig {
         name: "blha".to_string(),
         cmd: "sleep     32".to_string(),
-        status: None,
+        status: ProcessStatus::Disabled,
     };
     println!("{:?}", proc);
     // proc.run();
