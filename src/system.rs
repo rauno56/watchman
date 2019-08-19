@@ -1,4 +1,5 @@
 use std::error;
+use std::fmt;
 use std::process::{Command, Stdio};
 use sysinfo::{Process as SysProc, ProcessExt, RefreshKind, System, SystemExt};
 
@@ -38,9 +39,36 @@ pub fn kill_by_pid(pid: i32) -> bool {
     get_ext_by_pid(pid).map_or(false, |proc| proc.kill(sysinfo::Signal::Kill))
 }
 
+#[derive(Debug)]
+struct SysError {
+    msg: String,
+}
+
+impl SysError {
+    fn new(msg: &str) -> Self {
+        SysError {
+            msg: msg.to_string(),
+        }
+    }
+
+    fn new_with_invalid_command(cmd: &str) -> Self {
+        Self::new(&format!("Invalid command: {}", cmd))
+    }
+}
+
+impl fmt::Display for SysError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
+impl error::Error for SysError {}
+
 pub fn run_from_string(input: &String) -> std::result::Result<i32, Box<error::Error>> {
     let mut parts = input.trim().split_whitespace();
-    let command = parts.next().unwrap();
+    let command = parts
+        .next()
+        .ok_or_else(|| SysError::new_with_invalid_command(input))?;
     let args = parts;
 
     let child = Command::new(command)
