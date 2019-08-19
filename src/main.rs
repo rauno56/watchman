@@ -1,9 +1,5 @@
 extern crate dialoguer;
 
-use crate::state::read_state;
-use crate::state::write_state;
-use crate::state::ProcessConfig;
-use crate::state::ProcessStatus;
 use crate::state::State;
 use crate::state::StateTrait;
 use std::error;
@@ -12,36 +8,10 @@ mod state;
 mod system;
 
 fn main() -> std::result::Result<(), Box<error::Error>> {
-    let _all_processes = vec![
-        ProcessConfig {
-            name: "all processes".to_string(),
-            cmd: "sleep 10".to_string(),
-            status: ProcessStatus::Disabled,
-        },
-        ProcessConfig {
-            name: "link to prod".to_string(),
-            cmd: "sleep 20".to_string(),
-            status: ProcessStatus::Disabled,
-        },
-        ProcessConfig {
-            name: "forward sql".to_string(),
-            cmd: "sleep 40".to_string(),
-            status: ProcessStatus::Disabled,
-        },
-    ];
     let file_name = "example.watchman.state.json";
-    let mut state: State = read_state(file_name)?;
+    let mut state: State = State::from_file(file_name)?;
 
     println!("{:?}", state);
-
-    let proc = ProcessConfig {
-        name: "blha".to_string(),
-        cmd: "sleep     32".to_string(),
-        status: ProcessStatus::Disabled,
-    };
-    println!("{:?}", proc);
-    // proc.run();
-    println!("{:?}", proc);
 
     state.update_all();
 
@@ -56,7 +26,7 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
     }
     println!("after {:?}", sleep);
 
-    write_state(file_name, &state)?;
+    state.to_file(file_name)?;
 
     // let selections = Checkboxes::with_theme(&ColorfulTheme::default())
     //     .with_prompt("Pick your food")

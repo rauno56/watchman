@@ -115,8 +115,10 @@ impl fmt::Display for ProcessConfig {
     }
 }
 
-pub trait StateTrait {
-    fn update_all(&mut self) {}
+pub trait StateTrait<DS = Self> {
+    fn update_all(&mut self);
+    fn from_file(file_path: &str) -> Result<DS, json5::Error>;
+    fn to_file(&self, file_path: &str) -> std::result::Result<(), Box<error::Error>>;
 }
 
 pub type State = HashMap<String, ProcessConfig>;
@@ -125,22 +127,20 @@ impl StateTrait for State {
     fn update_all(&mut self) {
         self.values_mut().for_each(|process| process.update());
     }
-}
 
-pub fn read_state(file_path: &str) -> Result<State, json5::Error> {
-    println!("Reading from {:?}", file_path);
-    let contents = fs::read_to_string(file_path).expect("Something went wrong reading the file");
+    fn from_file(file_path: &str) -> Result<Self, json5::Error> {
+        let contents =
+            fs::read_to_string(file_path).expect("Something went wrong reading the file");
 
-    json5::from_str(&contents)
-}
+        json5::from_str(&contents)
+    }
 
-pub fn write_state(file_path: &str, state: &State) -> std::result::Result<(), Box<error::Error>> {
-    println!("Writing Map {:?} to {:?}", state, file_path);
+    fn to_file(&self, file_path: &str) -> std::result::Result<(), Box<error::Error>> {
+        let mut buffer = File::create(format!("{}", file_path))?;
 
-    let mut buffer = File::create(format!("{}", file_path))?;
+        let serialized = json5::to_string(&self)?;
+        buffer.write_all(serialized.as_bytes())?;
 
-    let serialized = json5::to_string(&state)?;
-    buffer.write_all(serialized.as_bytes())?;
-
-    return std::result::Result::Ok(());
+        return std::result::Result::Ok(());
+    }
 }
