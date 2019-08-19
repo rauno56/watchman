@@ -118,6 +118,10 @@ impl fmt::Display for ProcessConfig {
     }
 }
 
+trait StateTrait {
+    fn update_all(&mut self) {}
+}
+
 type MapState = HashMap<String, ProcessConfig>;
 
 impl From<&State> for MapState {
@@ -131,18 +135,23 @@ impl From<&State> for MapState {
     }
 }
 
+impl StateTrait for MapState {
+    fn update_all(&mut self) {
+        self.values_mut().for_each(|process| process.update());
+    }
+}
+
 //TODO: refactor State into a Map instead to have name as an index more naturally
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 struct State {
     processes: Vec<ProcessConfig>,
 }
 
-impl State {
+impl StateTrait for State {
     fn update_all(&mut self) {
-        //? How to turn that into a for_each call?
-        for process in &mut self.processes {
-            process.update();
-        }
+        self.processes
+            .iter_mut()
+            .for_each(|process| process.update());
     }
 }
 
