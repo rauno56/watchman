@@ -21,23 +21,30 @@ enum ProcessStatus {
     Disabled,
 }
 
+//TODO: refactor ProcessConfig into a Map instead to have name as an index more naturally
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 struct ProcessConfig {
     name: String,
     cmd: String,
-    //TODO: pid is currently duplicated in ProcessStatus
-    pid: Option<i32>,
     status: Option<ProcessStatus>,
 }
 
 impl ProcessConfig {
+    //TODO: see if you can make status as non-optional and use something like "New" as a variant
+    fn get_pid(&self) -> Option<i32> {
+        match self.status {
+            Some(ProcessStatus::Running(proc)) | Some(ProcessStatus::Invalid(proc)) => Some(proc),
+            _ => None,
+        }
+    }
+
     fn check_status(&self) -> ProcessStatus {
         //? Is there a way to avoid nestedness here?
         /*
             My initial ambition was to somehow have chained calls instead of nested ones,
             each one unwrapping another layer of Option.
         */
-        self.pid.map_or(ProcessStatus::Disabled, |pid| {
+        self.get_pid().map_or(ProcessStatus::Disabled, |pid| {
             get_by_pid(pid).map_or(ProcessStatus::Stopped, |proc| {
                 if self.cmd == proc.cmd {
                     ProcessStatus::Running(proc.pid)
@@ -57,7 +64,6 @@ impl ProcessConfig {
 
         if !self.is_running() {
             let res = run_from_string(&self.cmd)?;
-            self.pid = Some(res);
             self.status = Some(ProcessStatus::Running(res));
 
             get_by_pid(res).map(|proc| {
@@ -133,19 +139,16 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
         ProcessConfig {
             name: "all processes".to_string(),
             cmd: "sleep 10".to_string(),
-            pid: Some(24746),
             status: None,
         },
         ProcessConfig {
             name: "link to prod".to_string(),
             cmd: "sleep 20".to_string(),
-            pid: None,
             status: None,
         },
         ProcessConfig {
             name: "forward sql".to_string(),
             cmd: "sleep 40".to_string(),
-            pid: Some(1234),
             status: None,
         },
     ];
@@ -164,7 +167,6 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
     let proc = ProcessConfig {
         name: "blha".to_string(),
         cmd: "sleep     32".to_string(),
-        pid: None,
         status: None,
     };
     println!("{:?}", proc);
