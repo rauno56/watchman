@@ -1,6 +1,5 @@
-use json5;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
 use std::error;
 use std::fmt;
 use std::fs;
@@ -134,10 +133,12 @@ impl fmt::Display for ProcessConfig {
     }
 }
 
+pub type ParseError = serde_json::error::Error;
+
 pub trait StateTrait<DS = Self> {
     fn update_all(&mut self);
     fn fix_all(&mut self);
-    fn from_file(file_path: &str) -> Result<DS, json5::Error>;
+    fn from_file(file_path: &str) -> Result<DS, ParseError>;
     fn to_file(&self, file_path: &str) -> std::result::Result<(), Box<error::Error>>;
 }
 
@@ -152,17 +153,17 @@ impl StateTrait for State {
         self.iter_mut().for_each(|process| process.fix());
     }
 
-    fn from_file(file_path: &str) -> Result<Self, json5::Error> {
+    fn from_file(file_path: &str) -> Result<Self, ParseError> {
         let contents =
             fs::read_to_string(file_path).expect("Something went wrong reading the file");
 
-        json5::from_str(&contents)
+        serde_json::from_str(&contents)
     }
 
     fn to_file(&self, file_path: &str) -> std::result::Result<(), Box<error::Error>> {
         let mut buffer = File::create(format!("{}", file_path))?;
 
-        let serialized = json5::to_string(&self)?;
+        let serialized = serde_json::to_string_pretty(&self)?;
         buffer.write_all(serialized.as_bytes())?;
 
         return std::result::Result::Ok(());
