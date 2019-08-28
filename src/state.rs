@@ -141,15 +141,15 @@ pub trait StateTrait<DS = Self> {
     fn to_file(&self, file_path: &str) -> std::result::Result<(), Box<error::Error>>;
 }
 
-pub type State = HashMap<String, ProcessConfig>;
+pub type State = Vec<ProcessConfig>;
 
 impl StateTrait for State {
     fn update_all(&mut self) {
-        self.values_mut().for_each(|process| process.update());
+        self.iter_mut().for_each(|process| process.update());
     }
 
     fn fix_all(&mut self) {
-        self.values_mut().for_each(|process| process.fix());
+        self.iter_mut().for_each(|process| process.fix());
     }
 
     fn from_file(file_path: &str) -> Result<Self, json5::Error> {

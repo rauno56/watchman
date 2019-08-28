@@ -13,7 +13,7 @@ mod system;
 // fn select<T>(data: Vec<T>, ids: Vec<usize>) {}
 
 fn update_from_user(mut state: State) -> State {
-    let mut all_processes: Vec<&mut ProcessConfig> = state.values_mut().collect();
+    let mut all_processes: Vec<&mut ProcessConfig> = state.iter_mut().collect();
     let defs: Vec<bool> = all_processes.iter().map(|proc| proc.is_enabled()).collect();
 
     let selections = Checkboxes::with_theme(&ColorfulTheme::default())
