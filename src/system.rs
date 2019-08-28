@@ -28,11 +28,19 @@ fn join(parts: Vec<String>) -> String {
 }
 
 pub fn get_by_pid(pid: i32) -> Option<Process> {
-    get_ext_by_pid(pid).map(|proc| Process {
-        name: proc.name().to_string(),
-        cmd: join(proc.cmd().to_vec()),
-        pid: proc.pid(),
-    })
+    get_ext_by_pid(pid)
+        /*
+            Zombie processes come up in our case when a process is started during the
+            same program execution when killed For simplicity we are just acting like
+            those weren't there and those resources will be cleaned once our program
+            exits.
+        */
+        .filter(|proc| proc.status().to_string() != "Zombie")
+        .map(|proc| Process {
+            name: proc.name().to_string(),
+            cmd: join(proc.cmd().to_vec()),
+            pid: proc.pid(),
+        })
 }
 
 pub fn kill_by_pid(pid: i32) -> bool {

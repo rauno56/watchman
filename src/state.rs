@@ -48,6 +48,7 @@ impl ProcessConfig {
     }
 
     fn check_status(&self) -> ProcessStatus {
+        // println!("Checking from {:?} for {:?}", self.status, self);
         //? Is there a way to avoid nestedness here?
         /*
             My initial ambition was to somehow have chained calls instead of nested ones,
@@ -58,6 +59,10 @@ impl ProcessConfig {
                 if self.cmd == proc.cmd {
                     ProcessStatus::Running(proc.pid)
                 } else {
+                    eprintln!(
+                        "Expected {:?}, saw {:?} at {}",
+                        self.cmd, proc.cmd, proc.pid
+                    );
                     ProcessStatus::Invalid(proc.pid)
                 }
             })
@@ -66,6 +71,12 @@ impl ProcessConfig {
 
     fn update(&mut self) {
         self.status = self.check_status();
+    }
+
+    fn fix(&mut self) {
+        if self.is_enabled() {
+            self.run();
+        }
     }
 
     pub fn run(&mut self) -> Result<(), Box<error::Error>> {
@@ -77,7 +88,6 @@ impl ProcessConfig {
 
             get_by_pid(res).map(|proc| {
                 self.cmd = proc.cmd;
-                // self.name = proc.name;
             });
         }
 
@@ -85,17 +95,19 @@ impl ProcessConfig {
     }
 
     pub fn kill(&mut self) -> bool {
+        // println!("Killing {:?}", self.name);
         self.update();
 
         match self.status {
             ProcessStatus::Running(pid) => {
                 let res = system::kill_by_pid(pid);
-                self.update();
-                match self.status {
-                    ProcessStatus::Stopped(_) => self.status = ProcessStatus::Disabled,
-                    _ => {}
-                }
+                // set disabled or... retry?
+                self.kill();
                 res
+            }
+            ProcessStatus::Stopped(_) => {
+                self.status = ProcessStatus::Disabled;
+                false
             }
             _ => false,
         }
@@ -105,6 +117,13 @@ impl ProcessConfig {
         match self.status {
             ProcessStatus::Running(_pid) => true,
             _ => false,
+        }
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        match self.status {
+            ProcessStatus::Disabled => false,
+            _ => true,
         }
     }
 }
@@ -117,6 +136,7 @@ impl fmt::Display for ProcessConfig {
 
 pub trait StateTrait<DS = Self> {
     fn update_all(&mut self);
+    fn fix_all(&mut self);
     fn from_file(file_path: &str) -> Result<DS, json5::Error>;
     fn to_file(&self, file_path: &str) -> std::result::Result<(), Box<error::Error>>;
 }
@@ -126,6 +146,10 @@ pub type State = HashMap<String, ProcessConfig>;
 impl StateTrait for State {
     fn update_all(&mut self) {
         self.values_mut().for_each(|process| process.update());
+    }
+
+    fn fix_all(&mut self) {
+        self.values_mut().for_each(|process| process.fix());
     }
 
     fn from_file(file_path: &str) -> Result<Self, json5::Error> {
