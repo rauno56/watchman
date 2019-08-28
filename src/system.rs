@@ -5,7 +5,6 @@ use sysinfo::{Process as SysProc, ProcessExt, RefreshKind, System, SystemExt};
 
 #[derive(Debug)]
 pub struct Process {
-    pub name: String,
     pub cmd: String,
     pub pid: i32,
 }
@@ -37,7 +36,6 @@ pub fn get_by_pid(pid: i32) -> Option<Process> {
         */
         .filter(|proc| proc.status().to_string() != "Zombie")
         .map(|proc| Process {
-            name: proc.name().to_string(),
             cmd: join(proc.cmd().to_vec()),
             pid: proc.pid(),
         })
