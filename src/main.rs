@@ -79,6 +79,12 @@ fn show(state: &State) {
     println!("{:?}", state);
 }
 
+fn add(mut state: State, command: String, name: Option<String>) -> State {
+    state.add(command, name);
+
+    state
+}
+
 fn main() -> std::result::Result<(), Box<error::Error>> {
     let args = Cli::from_args();
 
@@ -91,6 +97,7 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
         Some(subcommand) => match subcommand {
             SubCommand::Show => show(&state),
             SubCommand::Config => println!("{}", state_path.to_str().unwrap()),
+            SubCommand::Add { command, name } => state = add(state, command, name),
             _ => unimplemented!(),
         },
         None => state = interactive(state),

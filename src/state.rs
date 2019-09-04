@@ -143,11 +143,24 @@ pub trait StateTrait<DS = Self> {
     fn fix_all(&mut self);
     fn from_file<P: AsRef<Path>>(file_path: P) -> Result<DS, ParseError>;
     fn to_file<P: AsRef<Path>>(&self, file_path: P) -> std::result::Result<(), Box<error::Error>>;
+    fn add(&mut self, cmd: String, name: Option<String>);
 }
 
 pub type State = Vec<ProcessConfig>;
 
 impl StateTrait for State {
+    fn add(&mut self, cmd: String, name: Option<String>) {
+        let mut pc = ProcessConfig {
+            cmd,
+            name,
+            status: ProcessStatus::Disabled,
+        };
+
+        pc.run();
+
+        self.push(pc);
+    }
+
     fn update_all(&mut self) {
         self.iter_mut().for_each(|process| process.update());
     }
