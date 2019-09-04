@@ -1,11 +1,10 @@
-// #[macro_use]
 extern crate dialoguer;
 extern crate structopt;
 
 use dialoguer::{theme::ColorfulTheme, Checkboxes};
 use std::error;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use structopt::StructOpt;
 
 use crate::state::ProcessConfig;
@@ -43,7 +42,6 @@ fn update_from_user(mut state: State) -> State {
     let selections = Checkboxes::with_theme(&ColorfulTheme::default())
         .with_prompt("Pick processes you want to be running")
         .items(&all_processes[..])
-        // .clear(false)
         .defaults(&defs[..])
         .interact()
         .unwrap();
@@ -56,8 +54,14 @@ fn update_from_user(mut state: State) -> State {
                 all_processes[i].kill();
             }
             (false, true) => {
-                println!("Enabling {}", all_processes[i]);
-                all_processes[i].run();
+                match all_processes[i].run() {
+                    Result::Err(err) => {
+                        println!("Enabling {} FAILED with {}", all_processes[i], err);
+                    }
+                    _ => {
+                        println!("Enabling {}", all_processes[i]);
+                    }
+                };
             }
             _ => {}
         };
@@ -66,23 +70,17 @@ fn update_from_user(mut state: State) -> State {
     state
 }
 
-fn interactive(mut state: State) -> State {
-    state.fix_all();
+fn interactive(mut state: State) -> Result<State, Box<error::Error>> {
+    state.fix_all()?;
 
     state = update_from_user(state);
 
-    state
+    Result::Ok(state)
 }
 
 fn show(state: &State) {
     //TODO: Implement Display for state
     println!("{:?}", state);
-}
-
-fn add(mut state: State, command: String, name: Option<String>) -> State {
-    state.add(command, name);
-
-    state
 }
 
 fn main() -> std::result::Result<(), Box<error::Error>> {
@@ -92,15 +90,15 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
     let state_path = fs::canonicalize(Path::new(file_input))?;
     let mut state: State = State::from_file(&state_path)?;
 
-    // println!("{:?}", args);
     match args.cmd {
         Some(subcommand) => match subcommand {
             SubCommand::Show => show(&state),
             SubCommand::Config => println!("{}", state_path.to_str().unwrap()),
-            SubCommand::Add { command, name } => state = add(state, command, name),
-            _ => unimplemented!(),
+            SubCommand::Add { command, name } => state.add(command, name)?,
         },
-        None => state = interactive(state),
+        None => {
+            state = interactive(state)?;
+        }
     }
 
     state.to_file(&state_path)?;

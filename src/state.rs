@@ -28,6 +28,8 @@ impl Default for ProcessStatus {
     }
 }
 
+type MayError = Result<(), Box<error::Error>>;
+
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct ProcessConfig {
     pub name: Option<String>,
@@ -72,13 +74,15 @@ impl ProcessConfig {
         self.status = self.check_status();
     }
 
-    fn fix(&mut self) {
+    fn fix(&mut self) -> MayError {
         if self.is_enabled() {
-            self.run();
+            self.run()?
         }
+
+        Result::Ok(())
     }
 
-    pub fn run(&mut self) -> Result<(), Box<error::Error>> {
+    pub fn run(&mut self) -> MayError {
         self.update();
 
         if !self.is_running() {
@@ -140,33 +144,39 @@ pub type ParseError = serde_json::error::Error;
 
 pub trait StateTrait<DS = Self> {
     fn update_all(&mut self);
-    fn fix_all(&mut self);
+    fn fix_all(&mut self) -> MayError;
     fn from_file<P: AsRef<Path>>(file_path: P) -> Result<DS, ParseError>;
-    fn to_file<P: AsRef<Path>>(&self, file_path: P) -> std::result::Result<(), Box<error::Error>>;
-    fn add(&mut self, cmd: String, name: Option<String>);
+    fn to_file<P: AsRef<Path>>(&self, file_path: P) -> MayError;
+    fn add(&mut self, cmd: String, name: Option<String>) -> MayError;
 }
 
 pub type State = Vec<ProcessConfig>;
 
 impl StateTrait for State {
-    fn add(&mut self, cmd: String, name: Option<String>) {
+    fn add(&mut self, cmd: String, name: Option<String>) -> MayError {
         let mut pc = ProcessConfig {
             cmd,
             name,
             status: ProcessStatus::Disabled,
         };
 
-        pc.run();
+        pc.run()?;
 
         self.push(pc);
+
+        Result::Ok(())
     }
 
     fn update_all(&mut self) {
         self.iter_mut().for_each(|process| process.update());
     }
 
-    fn fix_all(&mut self) {
-        self.iter_mut().for_each(|process| process.fix());
+    fn fix_all(&mut self) -> MayError {
+        self.iter_mut()
+            .map(|process| process.fix())
+            .collect::<MayError>()?;
+
+        Result::Ok(())
     }
 
     fn from_file<P: AsRef<Path>>(file_path: P) -> Result<Self, ParseError> {
@@ -176,7 +186,7 @@ impl StateTrait for State {
         serde_json::from_str(&contents)
     }
 
-    fn to_file<P: AsRef<Path>>(&self, file_path: P) -> std::result::Result<(), Box<error::Error>> {
+    fn to_file<P: AsRef<Path>>(&self, file_path: P) -> MayError {
         let mut buffer = File::create(file_path)?;
 
         let serialized = serde_json::to_string_pretty(&self)?;
