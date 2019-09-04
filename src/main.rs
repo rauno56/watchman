@@ -1,16 +1,40 @@
+// #[macro_use]
 extern crate dialoguer;
+extern crate structopt;
+
+use dialoguer::{theme::ColorfulTheme, Checkboxes};
+use std::error;
+use std::fs;
+use std::path::{Path, PathBuf};
+use structopt::StructOpt;
 
 use crate::state::ProcessConfig;
-use dialoguer::{theme::ColorfulTheme, Checkboxes};
-
 use crate::state::State;
 use crate::state::StateTrait;
-use std::error;
 
 mod state;
 mod system;
 
-// fn select<T>(data: Vec<T>, ids: Vec<usize>) {}
+#[derive(Debug, StructOpt)]
+enum SubCommand {
+    #[structopt(name = "add")]
+    Add {
+        command: String,
+        #[structopt(long = "name")]
+        name: Option<String>,
+    },
+    #[structopt(name = "show")]
+    Show,
+    #[structopt(name = "config")]
+    Config,
+}
+
+#[derive(Debug, StructOpt)]
+#[structopt()]
+struct Cli {
+    #[structopt(subcommand)]
+    cmd: Option<SubCommand>,
+}
 
 fn update_from_user(mut state: State) -> State {
     let mut all_processes: Vec<&mut ProcessConfig> = state.iter_mut().collect();
@@ -42,19 +66,31 @@ fn update_from_user(mut state: State) -> State {
     state
 }
 
-fn main() -> std::result::Result<(), Box<error::Error>> {
-    let file_name = "example.watchman.state.json";
-    let mut state: State = State::from_file(file_name)?;
-
+fn interactive(mut state: State) -> State {
     state.fix_all();
-
-    // println!("{:?}", state);
 
     state = update_from_user(state);
 
-    // println!("{:?}", state);
+    state
+}
 
-    state.to_file(file_name)?;
+fn main() -> std::result::Result<(), Box<error::Error>> {
+    let args = Cli::from_args();
+
+    let file_input = "example.watchman.state.json";
+    let state_path = fs::canonicalize(Path::new(file_input))?;
+    let mut state: State = State::from_file(&state_path)?;
+
+    // println!("{:?}", args);
+    match args.cmd {
+        Some(subcommand) => match subcommand {
+            SubCommand::Config => println!("{}", state_path.to_str().unwrap()),
+            _ => unimplemented!(),
+        },
+        None => state = interactive(state),
+    }
+
+    state.to_file(&state_path)?;
 
     Ok(())
 }

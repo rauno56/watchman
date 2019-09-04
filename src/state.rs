@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
-
 use std::error;
 use std::fmt;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 
 use crate::system;
 use crate::system::get_by_pid;
@@ -138,8 +138,8 @@ pub type ParseError = serde_json::error::Error;
 pub trait StateTrait<DS = Self> {
     fn update_all(&mut self);
     fn fix_all(&mut self);
-    fn from_file(file_path: &str) -> Result<DS, ParseError>;
-    fn to_file(&self, file_path: &str) -> std::result::Result<(), Box<error::Error>>;
+    fn from_file<P: AsRef<Path>>(file_path: P) -> Result<DS, ParseError>;
+    fn to_file<P: AsRef<Path>>(&self, file_path: P) -> std::result::Result<(), Box<error::Error>>;
 }
 
 pub type State = Vec<ProcessConfig>;
@@ -153,18 +153,20 @@ impl StateTrait for State {
         self.iter_mut().for_each(|process| process.fix());
     }
 
-    fn from_file(file_path: &str) -> Result<Self, ParseError> {
+    fn from_file<P: AsRef<Path>>(file_path: P) -> Result<Self, ParseError> {
         let contents =
             fs::read_to_string(file_path).expect("Something went wrong reading the file");
 
         serde_json::from_str(&contents)
     }
 
-    fn to_file(&self, file_path: &str) -> std::result::Result<(), Box<error::Error>> {
-        let mut buffer = File::create(format!("{}", file_path))?;
+    fn to_file<P: AsRef<Path>>(&self, file_path: P) -> std::result::Result<(), Box<error::Error>> {
+        let mut buffer = File::create(file_path)?;
 
         let serialized = serde_json::to_string_pretty(&self)?;
+
         buffer.write_all(serialized.as_bytes())?;
+        buffer.write_all("\n".as_bytes())?;
 
         return std::result::Result::Ok(());
     }
