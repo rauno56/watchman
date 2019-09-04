@@ -1,14 +1,13 @@
 [
   {
-    "name": "sleep60",
+    "name": "very long sleep",
     "cmd": "sleep 60"
   },
   {
-    "name": "sleep20",
+    "name": "longer sleep",
     "cmd": "sleep 20"
   },
   {
-    "name": "sleep3",
     "cmd": "sleep 3"
   }
 ]

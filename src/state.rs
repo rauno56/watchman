@@ -30,7 +30,7 @@ impl Default for ProcessStatus {
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct ProcessConfig {
-    pub name: String,
+    pub name: Option<String>,
     pub cmd: String,
     #[serde(default)]
     pub status: ProcessStatus,
@@ -129,7 +129,10 @@ impl ProcessConfig {
 
 impl fmt::Display for ProcessConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
+        match self.name {
+            Some(ref name) => write!(f, "{}", name),
+            None => write!(f, "{}", self.cmd),
+        }
     }
 }
 
