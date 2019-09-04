@@ -74,6 +74,11 @@ fn interactive(mut state: State) -> State {
     state
 }
 
+fn show(state: &State) {
+    //TODO: Implement Display for state
+    println!("{:?}", state);
+}
+
 fn main() -> std::result::Result<(), Box<error::Error>> {
     let args = Cli::from_args();
 
@@ -84,6 +89,7 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
     // println!("{:?}", args);
     match args.cmd {
         Some(subcommand) => match subcommand {
+            SubCommand::Show => show(&state),
             SubCommand::Config => println!("{}", state_path.to_str().unwrap()),
             _ => unimplemented!(),
         },
