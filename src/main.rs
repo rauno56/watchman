@@ -21,12 +21,12 @@ enum SubCommand {
         #[structopt(long = "name")]
         name: Option<String>,
     },
-    #[structopt(name = "show")]
-    Show,
     #[structopt(name = "config")]
     Config,
     #[structopt(name = "fix")]
     Fix,
+    #[structopt(name = "show")]
+    Show,
 }
 
 #[derive(Debug, StructOpt)]
@@ -83,10 +83,10 @@ fn show(state: &State) {
     //? Would like to implement Display for state, but I'd need to wrap then instead of aliasing?
     state.iter().for_each(|proc| {
         let status_symbol = match proc.status {
+            ProcessStatus::Disabled => " ".normal(),
+            ProcessStatus::Running(_) => "✔".green().bold(),
             ProcessStatus::Invalid(_) => "✘".red().bold(),
             ProcessStatus::Stopped(_) => "?".yellow().bold(),
-            ProcessStatus::Running(_) => "✔".green().bold(),
-            ProcessStatus::Disabled => " ".normal(),
         };
         println!(" {} {}", status_symbol, proc);
     })
@@ -101,14 +101,14 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
 
     match args.cmd {
         Some(subcommand) => match subcommand {
-            SubCommand::Show => {
-                state.update_all();
-                show(&state);
-            },
-            SubCommand::Config => println!("{}", state_path.to_str().unwrap()),
             SubCommand::Add { command, name } => state.add(command, name)?,
+            SubCommand::Config => println!("{}", state_path.to_str().unwrap()),
             SubCommand::Fix => {
                 state.fix_all()?;
+                show(&state);
+            },
+            SubCommand::Show => {
+                state.update_all();
                 show(&state);
             },
         },

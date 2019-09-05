@@ -12,14 +12,14 @@ use crate::system::run_from_string;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub enum ProcessStatus {
+    /// Process is not expected to run.
+    Disabled,
     /// Expecting the process to be running with pid.
     Running(i32),
     /// Expected process is not running, but there is another one with pid.
     Invalid(i32),
     /// Expected process is not running, there is nothing with pid.
     Stopped(i32),
-    /// Process is not expected to run.
-    Disabled,
 }
 
 impl Default for ProcessStatus {
