@@ -6,9 +6,10 @@ authors = ["Rauno Viskus <Rauno56@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-dialoguer = { path = "../dialoguer" }
+dialoguer = { git = "https://github.com/Rauno56/dialoguer", branch = "refactor/norm-item-addition" }
 serde = { version = "1.0.98", features = ["derive"] }
 sysinfo = "0.9.1"
 serde_json = "1.0.40"
 structopt = "0.2.18"
 colored = "1.8.0"
+directories = "2.0.2"
