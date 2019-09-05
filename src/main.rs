@@ -25,6 +25,8 @@ enum SubCommand {
     Show,
     #[structopt(name = "config")]
     Config,
+    #[structopt(name = "fix")]
+    Fix,
 }
 
 #[derive(Debug, StructOpt)]
@@ -99,9 +101,16 @@ fn main() -> std::result::Result<(), Box<error::Error>> {
 
     match args.cmd {
         Some(subcommand) => match subcommand {
-            SubCommand::Show => show(&state),
+            SubCommand::Show => {
+                state.update_all();
+                show(&state);
+            },
             SubCommand::Config => println!("{}", state_path.to_str().unwrap()),
             SubCommand::Add { command, name } => state.add(command, name)?,
+            SubCommand::Fix => {
+                state.fix_all()?;
+                show(&state);
+            },
         },
         None => {
             state = interactive(state)?;
