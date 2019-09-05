@@ -3,8 +3,6 @@ use dialoguer::{theme::ColorfulTheme, Checkboxes};
 use directories::ProjectDirs;
 use std::error;
 use std::fs;
-use std::fs::File;
-use std::io::prelude::*;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -19,16 +17,23 @@ mod system;
 #[derive(Debug, StructOpt)]
 enum SubCommand {
     #[structopt(name = "add")]
+    /// Adds a command
+    ///
+    /// Example:
+    /// watchman add "sleep 3" --name "short sleep"
     Add {
         command: String,
         #[structopt(long = "name")]
         name: Option<String>,
     },
     #[structopt(name = "config")]
+    /// Shows configuration file location
     Config,
     #[structopt(name = "fix")]
+    /// Ensures that all configured processes are running
     Fix,
     #[structopt(name = "show")]
+    /// Updates and displays the state of all processes
     Show,
 }
 
@@ -112,21 +117,20 @@ fn get_state_path() -> Result<PathBuf, Box<error::Error>> {
 
     if !default_state_path.is_dir() {
         println!("Creating config dir: {:?}", default_state_path);
-        std::fs::create_dir_all(&default_state_path)?;
+        fs::create_dir_all(&default_state_path)?;
     }
 
     default_state_path.push(PathBuf::from("state.json"));
 
     if !default_state_path.is_file() {
         println!("Creating state file: {:?}", default_state_path);
-        let mut file = File::create(&default_state_path)?;
-        file.write_all(b"[]")?;
+        State::new().to_file(&default_state_path)?;
     }
 
     Result::Ok(default_state_path)
 }
 
-fn main() -> std::result::Result<(), Box<error::Error>> {
+fn main() -> Result<(), Box<error::Error>> {
     let args = Cli::from_args();
 
     let file_input: PathBuf = args.state_path.unwrap_or(get_state_path()?);
