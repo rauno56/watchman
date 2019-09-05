@@ -1,13 +1,28 @@
 [
   {
     "name": "very long sleep",
-    "cmd": "sleep 60"
+    "cmd": "sleep 60",
+    "status": {
+      "Running": 12345
+    }
   },
   {
     "name": "longer sleep",
-    "cmd": "sleep 20"
+    "cmd": "sleep 20",
+    "status": {
+      "Invalid": 12345
+    }
   },
   {
-    "cmd": "sleep 3"
+    "name": null,
+    "cmd": "sleep 3",
+    "status": "Disabled"
+  },
+  {
+    "name": "hibernation",
+    "cmd": "sleep 100",
+    "status": {
+      "Stopped": 12345
+    }
   }
 ]

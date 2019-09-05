@@ -1,6 +1,4 @@
-extern crate dialoguer;
-extern crate structopt;
-
+use colored::*;
 use dialoguer::{theme::ColorfulTheme, Checkboxes};
 use std::error;
 use std::fs;
@@ -8,6 +6,7 @@ use std::path::Path;
 use structopt::StructOpt;
 
 use crate::state::ProcessConfig;
+use crate::state::ProcessStatus;
 use crate::state::State;
 use crate::state::StateTrait;
 
@@ -79,8 +78,16 @@ fn interactive(mut state: State) -> Result<State, Box<error::Error>> {
 }
 
 fn show(state: &State) {
-    //TODO: Implement Display for state
-    println!("{:?}", state);
+    //? Would like to implement Display for state, but I'd need to wrap then instead of aliasing?
+    state.iter().for_each(|proc| {
+        let status_symbol = match proc.status {
+            ProcessStatus::Invalid(_) => "✘".red().bold(),
+            ProcessStatus::Stopped(_) => "?".yellow().bold(),
+            ProcessStatus::Running(_) => "✔".green().bold(),
+            ProcessStatus::Disabled => " ".normal(),
+        };
+        println!(" {} {}", status_symbol, proc);
+    })
 }
 
 fn main() -> std::result::Result<(), Box<error::Error>> {

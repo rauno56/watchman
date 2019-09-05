@@ -49,7 +49,6 @@ impl ProcessConfig {
     }
 
     fn check_status(&self) -> ProcessStatus {
-        // println!("Checking from {:?} for {:?}", self.status, self);
         //? Is there a way to avoid nestedness here?
         /*
             My initial ambition was to somehow have chained calls instead of nested ones,
