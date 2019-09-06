@@ -79,9 +79,9 @@ pub fn run_from_string(input: &String) -> std::result::Result<i32, Box<error::Er
 
     let child = Command::new(command)
         .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .spawn()?;
 
     std::result::Result::Ok(child.id() as i32)
