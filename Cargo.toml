@@ -1,6 +1,6 @@
 [package]
 name = "watchman"
-version = "1.0.0"
+version = "1.1.0"
 description = "Utility for keeping processes running. Built for ssh tunnels and kubectl port forwarding."
 authors = ["Rauno Viskus <Rauno56@gmail.com>"]
 keywords = ["watch", "cli", "tunnel", "process", "system", "ssh", "forward", "daemon"]
@@ -17,3 +17,7 @@ serde_json = "1.0.40"
 structopt = "0.2.18"
 colored = "1.8.0"
 directories = "2.0.2"
+
+[profile.release]
+lto = true
+opt-level = "z"
