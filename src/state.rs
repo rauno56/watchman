@@ -71,6 +71,14 @@ impl ProcessConfig {
 
     fn update(&mut self) {
         self.status = self.check_status();
+
+        //? Is there a good way to refactor this method more functional?
+        if self.is_enabled() && !self.is_running() {
+            // have to keep them separate because "`let` expressions in this position are experimental"
+            if let Some(adopted_proc) = system::get_by_cmd(&self.cmd) {
+                self.status = ProcessStatus::Running(adopted_proc.pid);
+            }
+        }
     }
 
     fn fix(&mut self) -> MayError {

@@ -9,6 +9,13 @@ pub struct Process {
     pub pid: i32,
 }
 
+fn sysproc_to_process(proc: SysProc) -> Process {
+    Process {
+        cmd: join(proc.cmd().to_vec()),
+        pid: proc.pid(),
+    }
+}
+
 fn get_ext_by_pid(pid: i32) -> Option<SysProc> {
     let mut sys = System::new_with_specifics(RefreshKind::new());
     sys.refresh_process(pid);
@@ -43,6 +50,29 @@ pub fn get_by_pid(pid: i32) -> Option<Process> {
 
 pub fn kill_by_pid(pid: i32) -> bool {
     get_ext_by_pid(pid).map_or(false, |proc| proc.kill(sysinfo::Signal::Kill))
+}
+
+fn get_ext_by_cmd(cmd: &String) -> Option<SysProc> {
+    let mut system = sysinfo::System::new();
+
+    // First we update all information of our system struct.
+    system.refresh_all();
+
+    for (_pid, proc) in system.get_process_list() {
+        if *cmd == join(proc.cmd().to_vec()) {
+            return Some(proc.clone());
+        }
+    }
+
+    None
+}
+
+pub fn get_by_cmd(cmd: &String) -> Option<Process> {
+    get_ext_by_cmd(cmd)
+        .map(|proc| Process {
+            cmd: join(proc.cmd().to_vec()),
+            pid: proc.pid(),
+        })
 }
 
 #[derive(Debug)]
