@@ -42,10 +42,7 @@ pub fn get_by_pid(pid: i32) -> Option<Process> {
             exits.
         */
         .filter(|proc| proc.status().to_string() != "Zombie")
-        .map(|proc| Process {
-            cmd: join(proc.cmd().to_vec()),
-            pid: proc.pid(),
-        })
+        .map(sysproc_to_process)
 }
 
 pub fn kill_by_pid(pid: i32) -> bool {
@@ -69,10 +66,7 @@ fn get_ext_by_cmd(cmd: &String) -> Option<SysProc> {
 
 pub fn get_by_cmd(cmd: &String) -> Option<Process> {
     get_ext_by_cmd(cmd)
-        .map(|proc| Process {
-            cmd: join(proc.cmd().to_vec()),
-            pid: proc.pid(),
-        })
+        .map(sysproc_to_process)
 }
 
 #[derive(Debug)]
