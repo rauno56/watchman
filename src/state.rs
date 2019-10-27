@@ -28,7 +28,7 @@ impl Default for ProcessStatus {
     }
 }
 
-type MayError = Result<(), Box<error::Error>>;
+type MayError = Result<(), Box<dyn error::Error>>;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct ProcessConfig {

@@ -85,7 +85,7 @@ fn update_from_user(mut state: State) -> State {
     state
 }
 
-fn interactive(mut state: State) -> Result<State, Box<error::Error>> {
+fn interactive(mut state: State) -> Result<State, Box<dyn error::Error>> {
     if state.is_empty() {
         println!("No processes configured. See \"watchman --help\"");
         return Result::Ok(state);
@@ -113,7 +113,7 @@ fn show(state: &State) {
     })
 }
 
-fn get_state_path() -> Result<PathBuf, Box<error::Error>> {
+fn get_state_path() -> Result<PathBuf, Box<dyn error::Error>> {
     let mut default_state_path: PathBuf = ProjectDirs::from("", "rauno56", "watchman")
         .unwrap()
         .config_dir()
@@ -134,7 +134,7 @@ fn get_state_path() -> Result<PathBuf, Box<error::Error>> {
     Result::Ok(default_state_path)
 }
 
-fn main() -> Result<(), Box<error::Error>> {
+fn main() -> Result<(), Box<dyn error::Error>> {
     let args = Cli::from_args();
 
     let file_input: PathBuf = args.state_path.unwrap_or(get_state_path()?);

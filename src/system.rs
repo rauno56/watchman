@@ -100,7 +100,7 @@ impl fmt::Display for SysError {
 
 impl error::Error for SysError {}
 
-pub fn run_from_string(input: &String) -> std::result::Result<i32, Box<error::Error>> {
+pub fn run_from_string(input: &String) -> std::result::Result<i32, Box<dyn error::Error>> {
     let mut parts = input.trim().split_whitespace();
     let command = parts
         .next()
