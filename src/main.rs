@@ -14,6 +14,10 @@ use crate::state::StateTrait;
 mod state;
 mod system;
 
+// TODO: set cmd
+// TODO: enable command by name
+// TODO: disable command by name
+// TODO: remove command
 #[derive(Debug, StructOpt)]
 enum SubCommand {
     #[structopt(name = "add")]
@@ -105,7 +109,7 @@ fn show(state: &State) {
             ProcessStatus::Invalid(_) => "✘".red().bold(),
             ProcessStatus::Stopped(_) => "?".yellow().bold(),
         };
-        println!(" {} {}", status_symbol, proc);
+        println!(" {} {:+}", status_symbol, proc);
     })
 }
 

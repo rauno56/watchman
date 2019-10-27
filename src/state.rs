@@ -89,6 +89,9 @@ impl ProcessConfig {
             self.status = ProcessStatus::Running(res);
 
             get_by_pid(res).map(|proc| {
+                if proc.cmd.len() < 2 {
+                    panic!("Empty cmd: {:?}", proc);
+                }
                 self.cmd = proc.cmd;
             });
         }
@@ -132,9 +135,16 @@ impl ProcessConfig {
 
 impl fmt::Display for ProcessConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.name {
-            Some(ref name) => write!(f, "{}", name),
-            None => write!(f, "{}", self.cmd),
+        if f.sign_plus() {
+            match self.name {
+                Some(ref name) => write!(f, "{name} [{cmd}]", name = name, cmd = self.cmd),
+                None => write!(f, "{}", self.cmd),
+            }
+        } else {
+            match self.name {
+                Some(ref name) => write!(f, "{}", name),
+                None => write!(f, "{}", self.cmd),
+            }
         }
     }
 }
