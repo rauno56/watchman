@@ -100,7 +100,11 @@ impl ProcessConfig {
                 if proc.cmd.len() < 2 {
                     panic!("Empty cmd: {:?}", proc);
                 }
-                self.cmd = proc.cmd;
+                if self.cmd != proc.cmd {
+                    eprintln!("Current pid is {}", std::process::id());
+                    eprintln!("Result from run is {}", &res);
+                    panic!("Changed cmd: {:?}", proc);
+                }
             });
         }
 
