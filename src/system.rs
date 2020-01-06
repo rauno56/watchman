@@ -1,5 +1,8 @@
 use std::error;
 use std::fmt;
+use std::fs::File;
+use std::fs::OpenOptions;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use sysinfo::{Process as SysProc, ProcessExt, RefreshKind, System, SystemExt};
 
@@ -65,8 +68,7 @@ fn get_ext_by_cmd(cmd: &String) -> Option<SysProc> {
 }
 
 pub fn get_by_cmd(cmd: &String) -> Option<Process> {
-    get_ext_by_cmd(cmd)
-        .map(sysproc_to_process)
+    get_ext_by_cmd(cmd).map(sysproc_to_process)
 }
 
 #[derive(Debug)]
@@ -94,18 +96,37 @@ impl fmt::Display for SysError {
 
 impl error::Error for SysError {}
 
-pub fn run_from_string(input: &String) -> std::result::Result<i32, Box<dyn error::Error>> {
+fn open_log_file(path: &PathBuf) -> File {
+    let mut new_file_options = OpenOptions::new();
+    let file_options = new_file_options.read(true).append(true).create(true);
+
+    file_options.open(path).unwrap()
+}
+
+pub fn run_from_string(
+    input: &String,
+    output_to: Option<&PathBuf>,
+) -> std::result::Result<i32, Box<dyn error::Error>> {
     let mut parts = input.trim().split_whitespace();
     let command = parts
         .next()
         .ok_or_else(|| SysError::new_with_invalid_command(input))?;
     let args = parts;
 
+    let (out, err) = match output_to {
+        Some(path) => {
+            let file_out = open_log_file(path);
+            let file_err = file_out.try_clone()?;
+            (Stdio::from(file_out), Stdio::from(file_err))
+        }
+        None => (Stdio::null(), Stdio::null()),
+    };
+
     let child = Command::new(command)
         .args(args)
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stdout(out)
+        .stderr(err)
         .spawn()?;
 
     std::result::Result::Ok(child.id() as i32)

@@ -1,6 +1,5 @@
 use colored::*;
 use dialoguer::{theme::ColorfulTheme, Checkboxes};
-use directories::ProjectDirs;
 use std::error;
 use std::fs;
 use std::path::PathBuf;
@@ -10,9 +9,11 @@ use crate::state::ProcessConfig;
 use crate::state::ProcessStatus;
 use crate::state::State;
 use crate::state::StateTrait;
+use crate::utils::get_state_path;
 
 mod state;
 mod system;
+mod utils;
 
 // TODO: set cmd
 // TODO: enable command by name
@@ -113,27 +114,6 @@ fn show(state: &State) {
     })
 }
 
-fn get_state_path() -> Result<PathBuf, Box<dyn error::Error>> {
-    let mut default_state_path: PathBuf = ProjectDirs::from("", "rauno56", "watchman")
-        .unwrap()
-        .config_dir()
-        .to_path_buf();
-
-    if !default_state_path.is_dir() {
-        println!("Creating config dir: {:?}", default_state_path);
-        fs::create_dir_all(&default_state_path)?;
-    }
-
-    default_state_path.push(PathBuf::from("state.json"));
-
-    if !default_state_path.is_file() {
-        println!("Creating state file: {:?}", default_state_path);
-        State::new().to_file(&default_state_path)?;
-    }
-
-    Result::Ok(default_state_path)
-}
-
 fn main() -> Result<(), Box<dyn error::Error>> {
     let args = Cli::from_args();
 
@@ -143,7 +123,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
     match args.cmd {
         Some(subcommand) => match subcommand {
-            SubCommand::Add { command, name } => state.add(command, name)?,
+            SubCommand::Add { command, name } => state.add(command, name, None)?,
             SubCommand::Config => println!("{}", state_path.to_str().unwrap()),
             SubCommand::Fix => {
                 state.fix_all()?;

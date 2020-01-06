@@ -5,10 +5,12 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
 
 use crate::system;
 use crate::system::get_by_pid;
 use crate::system::run_from_string;
+use crate::utils;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub enum ProcessStatus {
@@ -36,6 +38,7 @@ pub struct ProcessConfig {
     pub cmd: String,
     #[serde(default)]
     pub status: ProcessStatus,
+    pub output: Option<PathBuf>,
 }
 
 impl ProcessConfig {
@@ -93,7 +96,12 @@ impl ProcessConfig {
         self.update();
 
         if !self.is_running() {
-            let res = run_from_string(&self.cmd)?;
+            //TODO: solve this better
+            let default_path_option = utils::get_output_path().ok();
+            let default_path = default_path_option.as_ref();
+            let logs_path = self.output.as_ref().or(default_path);
+
+            let res = run_from_string(&self.cmd, logs_path)?;
             self.status = ProcessStatus::Running(res);
 
             get_by_pid(res).map(|proc| {
@@ -103,7 +111,7 @@ impl ProcessConfig {
                 if self.cmd != proc.cmd {
                     eprintln!("Current pid is {}", std::process::id());
                     eprintln!("Result from run is {}", &res);
-                    panic!("Changed cmd: {:?}", proc);
+                    panic!("Changed cmd: {:?} -> {:?}", self.cmd, proc);
                 }
             });
         }
@@ -168,17 +176,18 @@ pub trait StateTrait<DS = Self> {
     fn fix_all(&mut self) -> MayError;
     fn from_file<P: AsRef<Path>>(file_path: P) -> Result<DS, ParseError>;
     fn to_file<P: AsRef<Path>>(&self, file_path: P) -> MayError;
-    fn add(&mut self, cmd: String, name: Option<String>) -> MayError;
+    fn add(&mut self, cmd: String, name: Option<String>, output: Option<PathBuf>) -> MayError;
 }
 
 pub type State = Vec<ProcessConfig>;
 
 impl StateTrait for State {
-    fn add(&mut self, cmd: String, name: Option<String>) -> MayError {
+    fn add(&mut self, cmd: String, name: Option<String>, output: Option<PathBuf>) -> MayError {
         let mut pc = ProcessConfig {
             cmd,
             name,
             status: ProcessStatus::Disabled,
+            output,
         };
 
         pc.run()?;
