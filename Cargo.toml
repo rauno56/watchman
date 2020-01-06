@@ -1,6 +1,6 @@
 [package]
 name = "watchman"
-version = "1.1.0"
+version = "1.2.0"
 description = "Utility for keeping processes running. Built for ssh tunnels and kubectl port forwarding."
 authors = ["Rauno Viskus <Rauno56@gmail.com>"]
 keywords = ["watch", "cli", "tunnel", "process", "system", "ssh", "forward", "daemon"]

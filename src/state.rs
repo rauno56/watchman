@@ -224,6 +224,6 @@ impl StateTrait for State {
         buffer.write_all(serialized.as_bytes())?;
         buffer.write_all("\n".as_bytes())?;
 
-        return std::result::Result::Ok(());
+        std::result::Result::Ok(())
     }
 }

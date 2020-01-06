@@ -28,12 +28,12 @@ fn get_ext_by_pid(pid: i32) -> Option<SysProc> {
 fn join(parts: Vec<String>) -> String {
     let mut res = String::new();
     for part in parts {
-        if res.len() > 0 {
+        if !res.is_empty() {
             res.push_str(&" ");
         }
         res.push_str(&part)
     }
-    return res;
+    res
 }
 
 pub fn get_by_pid(pid: i32) -> Option<Process> {
