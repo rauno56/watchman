@@ -1,5 +1,9 @@
-#![allow(dead_code, unused_imports, unused_variables)]
-
+use chrono::Local;
+use std::io::{BufRead, BufReader, Read};
+use std::marker::Send;
+use std::thread::JoinHandle;
+use std::io::{Error, ErrorKind};
+use std::sync::mpsc::{channel, Receiver};
 use std::cmp;
 use std::error;
 use std::fmt;
@@ -7,7 +11,7 @@ use std::fs::File;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
+
 use std::time::Duration;
 use sysinfo::{Process as SysProc, ProcessExt, RefreshKind, System, SystemExt};
 
@@ -143,7 +147,7 @@ use std::io::{self, Write};
 
 pub fn keep_running_from_string(
     input: &String,
-    prefix: &String,
+    _prefix: &String,
     output_to: Option<&PathBuf>,
 ) -> std::result::Result<i32, Box<dyn error::Error>> {
     let mut parts = input.trim().split_whitespace();
@@ -153,122 +157,99 @@ pub fn keep_running_from_string(
     let args = parts;
 
     let mut wait_time = 1;
+    let mut file_out = output_to.map(|path| open_log_file(path));
+    let mut log = move |line: LogLine| {
+        let line = format!("{} {}", Local::now().format("%Y-%m-%d %H:%M:%S"), line);
+        println!("{}", line);
+        if let Some(file_out) = file_out.as_mut() {
+            writeln!(file_out, "{}", line).expect("Failed to write to log file");
+        }
+    };
 
     loop {
-        println!("Restarting {:?}", input);
-        println!("Output {:?}", output_to);
-        let (file_out, file_err) = match output_to {
-            Some(path) => {
-                let file_out = open_log_file(path);
-                let file_err = file_out
-                    .try_clone()
-                    .ok()
-                    .map(|file| Arc::new(Mutex::new(file)));
-                (Some(Arc::new(Mutex::new(file_out))), file_err)
-            }
-            None => (None, None),
-        };
+        log(LogLine::Sys(format!("Restarting {:?}", input)));
+        log(LogLine::Sys(format!("res output {:?}", output_to)));
 
-        // .map(|path| {
-        // });
-
-        println!("res output {:?}", output_to);
-
-        let output_handler = |source, line| {
-            println!("[{:?}] {}", source, line);
-            // match source {
-            //     OutputSource::Out => {
-            //         println!("{}", line);
-            //     }
-            //     OutputSource::Err => {
-            //         eprintln!("{}", line);
-            //     }
-            // }
-
-            if let Some(file_out) = file_out.clone() {
-                writeln!(
-                    file_out.lock().unwrap(),
-                    "{} [{:?}] {}",
-                    Local::now().format("%Y-%m-%d %H:%M:%S"),
-                    source,
-                    line
-                )
-                .unwrap();
-            }
-            if let Some(file_err) = file_err.clone() {
-                writeln!(
-                    file_err.lock().unwrap(),
-                    "{} [{:?}] {}",
-                    Local::now().format("%Y-%m-%d %H:%M:%S"),
-                    source,
-                    line
-                )
-                .unwrap();
-            }
-        };
         let run = run_command_with_output_handler(
             Command::new(command)
                 .args(args.clone())
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped()),
-            output_handler,
         );
 
         match run {
-            // Ok(mut child) => {
-            //     println!("child running {:?}", child.id());
-            //     match child.wait() {
-            Ok(exit_status) => match exit_status.code() {
-                Some(status_code) => {
-                    if exit_status.success() {
-                        println!("success!");
-                        wait_time = 1;
-                    } else {
-                        println!("failure!");
-                        wait_time = cmp::min(wait_time * 2, 60);
+            Ok((mut child, rx)) => {
+                println!("child running {:?}", child.id());
+                loop {
+                    match rx.recv() {
+                        Ok(output) => {
+                            log(output);
+                        }
+                        Err(err) => {
+                            if let Ok(_exit_status) = child.try_wait() {
+                                break;
+                            }
+                            log(LogLine::Sys(format!(
+                                "Error receiving a log line: {:?}",
+                                err
+                            )));
+                        }
                     }
-                    println!("process exited with status {:?}", status_code);
                 }
-                None => {
-                    wait_time = 1;
-                    println!("process exited with no status");
+                match child.wait() {
+                    Ok(exit_status) => match exit_status.code() {
+                        Some(status_code) => {
+                            if exit_status.success() {
+                                wait_time = 1;
+                            } else {
+                                wait_time = cmp::min(wait_time * 2, 60);
+                            }
+                            log(LogLine::Sys(format!(
+                                "process exited with status {:?}",
+                                status_code
+                            )));
+                        }
+                        None => {
+                            wait_time = 1;
+                            log(LogLine::Sys(format!("process exited with no status")));
+                        }
+                    },
+                    Err(e) => {
+                        wait_time *= 2;
+                        log(LogLine::Sys(format!(
+                            "attempt to run the command errored {:?}",
+                            e
+                        )));
+                    }
                 }
-            },
+            }
             Err(e) => {
-                println!("process errored {:?}", e);
+                log(LogLine::Sys(format!("process errored {:?}", e)));
             }
         }
-        // }
-        // Err(e) => {
-        //     wait_time *= 2;
-        //     println!("attempt to run the command errored {:?}", e);
-        // }
-        // }
 
-        println!("sleeping {:?}s", wait_time);
+        log(LogLine::Sys(format!("sleeping {:?}s", wait_time)));
         thread::sleep(Duration::new(wait_time, 0));
     }
 }
 
 #[derive(Debug)]
-pub enum CommandResult {
+pub enum LogLine {
     StdOut(String),
     StdErr(String),
-    ExitStatus,
+    Sys(String),
 }
 
-#[derive(Debug)]
-pub enum OutputSource {
-    Out,
-    Err,
+impl fmt::Display for LogLine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LogLine::StdOut(line) => write!(f, "OUT {}", line),
+            LogLine::StdErr(line) => write!(f, "ERR {}", line),
+            LogLine::Sys(line) => write!(f, "SYS {}", line),
+        }
+    }
 }
-
-use chrono::Local;
-
-use std::io::{BufRead, BufReader, Read};
-use std::marker::Send;
-use std::thread::JoinHandle;
 
 fn process_readable_lines<T: 'static, F: 'static>(readable: T, mut handler: F) -> JoinHandle<()>
 where
@@ -285,18 +266,11 @@ where
     })
 }
 
-use std::io::{Error, ErrorKind};
-
-pub fn run_command_with_output_handler<Hn: 'static>(
+pub fn run_command_with_output_handler(
     command: &mut Command,
-    mut handler: Hn,
-) -> io::Result<std::process::ExitStatus>
-where
-    Hn: FnMut(OutputSource, String) -> () + Send + Copy,
-{
+) -> io::Result<(std::process::Child, Receiver<LogLine>)> {
     match command.spawn() {
         Ok(mut child) => {
-            println!("Child started: {:?}", child.stdout);
             let stdout = child
                 .stdout
                 .take()
@@ -305,19 +279,20 @@ where
                 .stderr
                 .take()
                 .ok_or(Error::new(ErrorKind::Other, "Could not take stderr"))?;
+            let (tx_out, rx) = channel();
+            let tx_err = tx_out.clone();
 
-            let out_handle = process_readable_lines(stdout, move |line| {
-                handler(OutputSource::Out, line);
+            let _out_handle = process_readable_lines(stdout, move |line| {
+                tx_out.send(LogLine::StdOut(line)).expect("Failed to send a stdout log line");
             });
-            let err_handle = process_readable_lines(stderr, move |line| {
-                handler(OutputSource::Err, line);
+            let _err_handle = process_readable_lines(stderr, move |line| {
+                tx_err.send(LogLine::StdErr(line)).expect("Failed to send a stderr log line");
             });
-            println!("thread spawned");
 
-            out_handle.join().unwrap();
+            Ok((child, rx))
+
+            // out_handle.join().unwrap();
             // err_handle.join().unwrap();
-
-            child.wait()
         }
         Err(err) => {
             println!("command didn't start: {:?}", err);
