@@ -147,7 +147,6 @@ use std::io::{self, Write};
 
 pub fn keep_running_from_string(
     input: &String,
-    _prefix: &String,
     output_to: Option<&PathBuf>,
 ) -> std::result::Result<i32, Box<dyn error::Error>> {
     let mut parts = input.trim().split_whitespace();

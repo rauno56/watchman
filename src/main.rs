@@ -137,7 +137,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
                 let output = output.and_then(|val| Some(PathBuf::from(val)));
                 let output: Option<&PathBuf> = output.as_ref();
-                system::keep_running_from_string(&s, &String::from("kala"), output)?;
+                system::keep_running_from_string(&s, output)?;
             }
             SubCommand::Add { command, name } => {
                 let mut state: State = State::from_file(&state_path)?;
