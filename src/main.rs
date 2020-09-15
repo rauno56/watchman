@@ -1,5 +1,5 @@
 use colored::*;
-use dialoguer::{theme::ColorfulTheme, Checkboxes};
+use dialoguer::{theme::ColorfulTheme, MultiSelect};
 use std::error;
 use std::fs;
 use std::path::PathBuf;
@@ -65,7 +65,7 @@ fn update_from_user(mut state: State) -> State {
     let mut all_processes: Vec<&mut ProcessConfig> = state.iter_mut().collect();
     let defs: Vec<bool> = all_processes.iter().map(|proc| proc.is_enabled()).collect();
 
-    let selections = Checkboxes::with_theme(&ColorfulTheme::default())
+    let selections = MultiSelect::with_theme(&ColorfulTheme::default())
         .with_prompt("Pick processes you want to be running")
         .items(&all_processes[..])
         .defaults(&defs[..])
